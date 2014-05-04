@@ -305,7 +305,7 @@ var Racquetball = (function() {
     });
     
     Crafty.scene('Court', function() {
-        
+        /*
         var fieldBounds = { x: { l: 0, h: 320 }, y: { l: 0, h: 432 } },
             score = 0,
             racquet = null,
@@ -325,8 +325,194 @@ var Racquetball = (function() {
             Crafty.trigger('MessageEvent', 'You Lose!');
             Crafty.scene('Message');
         });
+        */
         
+        // REFACTORING
+        
+        // entities
+        // -ball
+        // -racquet
+        // -score display
+        // -mute button
+        // -pause button
+        // -message display
+        // -blackbox
+        
+        // ball bounces off racquet and left, top, and right walls
+        // ball is destroyed when it passes racquet, and score when hitting top wall
+        // racquet moves left and right
+        // mute button toggles audio playback
+        // pause button halts ball and racquet and displays  'paused' in the message display
+        // blackbox is used to fade in and fade out the court scene
+        
+        // events
+        // -court_loading - triggered immediately when the Court scene is started
+        // -court_ready - triggered after court_loading fade completes
+        // -court_closing - triggered after message is closed
+        // -ball_scored - triggered when ball hits top wall
+        // -ball_lost - triggered when ball leaves bottom edge of screen
+        
+        // components
+        // -actor
+        //  provides place(), reset(), show(), activate() functions
+        // -blackbox
+        //  provides cover(), uncover(), fadeOut(), fadeIn() functions
+        // -display
+        //  provides display(), modal() functions
+        
+        Crafty.c('blackbox', {
+            init: function() {
+                this.requires('2D, DOM, Color, Tween')
+                .attr({ x: 0, y: 0, w: 320, h: 480, alpha: 1.0 })
+                .color('#000000');
+            },
+            cover: function() {
+                this.attr({ alpha: 1.0 });
+                return this;
+            },
+            uncover: function() {
+                this.attr({ alpha: 0.0 });
+                return this;
+            },
+            fadeOut: function(duration) {
+                this.tween({alpha: 0.0 }, duration);
+                return this;
+            },
+            fadeIn: function(duration) {
+                this.tween({alpha: 1.0 }, duration);
+                return this;
+            }
+        });
+        
+        Crafty.c('actor', {
+            _startX: 0,
+            _startY: 0,
+            _activated: false,
+            init: function() {
+                this.requires('2D, Canvas');
+            },
+            place: function(x, y) {
+                this._startX = x;
+                this._startY = y;
+                this.x = x;
+                this.y = y;
+                return this;
+            },
+            reset: function() {
+                this.x = this._startX;
+                this.y = this._startY;
+                return this;
+            },
+            show: function() {
+                this.attr({ alpha: 1.0 });
+                return this;
+            },
+            activate: function() {
+                this._activated = true;
+                return this;
+            }
+        });
+        
+        Crafty.c('display', {
+            init: function() {
+                this.requires('2D, DOM, Text');
+            },
+            display: function(what) {
+                this.textColor('#ffffff')
+                .textFont({size: '36px', family: 'Helvetica' })
+		.text(what)
+		.css('text-align', 'center');
+                return this;
+            },
+            modal: function() {
+                var t = this;
+                Crafty.e('2D, DOM, Mouse, modal')
+                .attr({
+                    x: 0,
+                    y: 0,
+                    w: Crafty.stage.elem.clientWidth,
+                    h: Crafty.stage.elem.clientHeight
+                })
+                .bind('Click', function() {
+                    t.trigger('dismiss');
+                    this.destroy();
+                });
+                return this;
+            }
+        });
+        
+        Crafty.c('racquet', {
+            init: function() {
+                this.requires('Image');
+            },
+        });
+        
+        var blackbox = Crafty.e('blackbox').uncover();
+        
+        var racquet = Crafty.e('actor, racquet').place();
+        var ball = Crafty.e('actor, ball').place();
+        
+        var scoreDisplay = Crafty.e('display');
+        
+        Crafty.bind('court_loading', function() {
+            blackbox.cover().fadeOut(1500).bind('TweenEnd', function() {
+                racquet.reset().show();
+                ball.reset().show();
+                score = 0;
+                scoreDisplay.display(score);
+                Crafty.trigger('court_ready');
+            });
+        });
+        
+        Crafty.bind('court_ready', function() {
+            setTimeout(function() {
+                racquet.activate();
+                ball.activate();
+            }, 1000);
+        });
+        
+        Crafty.bind('court_closing', function() {
+            blackbox.uncover().fadeIn(1500).bind('TweenEnd', function() {
+                Crafty.scene('Title');
+            });
+        });
+        
+        Crafty.bind('ball_scored', function() {
+            score++;
+            scoreDisplay.display(score);
+            if (score >= 15) {
+                message.display('You Win!').modal().bind('dismiss', function() {
+                    Crafty.trigger('court_closing');
+                });
+            }
+        });
+        
+        Crafty.bind('ball_lost', function() {
+            message.display('You Lose!').modal().bind('dismiss', function() {
+                Crafty.trigger('court_closing');
+            });
+        });
+        
+        // the court scene actually starts here
+        Crafty.trigger('court_loading');
+        
+    }, function() {
+        // remove global event bindings when the court scene exits
+        Crafty.unbind('court_loading');
+        Crafty.unbind('court_ready');
+        Crafty.unbind('court_closing');
+        Crafty.unbind('ball_scored');
+        Crafty.unbind('ball_lost');
+        
+        // stop audio playback
+        Crafty.audio.stop();
     });
+    
+    
+    
+    
+    
+    
     
     Crafty.scene('Message', function() {
         Crafty.bind('MessageEvent', function(msg) {
