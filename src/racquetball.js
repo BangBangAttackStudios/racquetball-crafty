@@ -27,13 +27,13 @@ var Racquetball = (function() {
             'sfx/lose.ogg','sfx/lose.mp3','sfx/lose.wav',
             'sfx/win.ogg','sfx/win.mp3','sfx/win.wav',
             
-            'bgm/track1.mp3','bgm/track1.ogg','bgm/track1.wav'
+            'bgm/racquet.mp3','bgm/racquet.ogg','bgm/racquet.wav'
         ];
         
         function onLoad() {
             
             Crafty.audio.add({
-                bgm: ['bgm/track1.mp3','bgm/track1.ogg','bgm/track1.wav'],
+                bgm: ['bgm/racquet.mp3','bgm/racquet.ogg','bgm/racquet.wav'],
                 bounce: ['sfx/bounce.ogg','sfx/bounce.mp3','sfx/bounce.wav'],
                 bounce2: ['sfx/bounce2.ogg','sfx/bounce2.mp3','sfx/bounce2.wav'],
                 win: ['sfx/win.ogg','sfx/win.mp3','sfx/win.wav'],
@@ -72,7 +72,6 @@ var Racquetball = (function() {
         Crafty.e('Delay').delay(function() {
             if (!skipped) {
                 Crafty.scene('Title');
-                
             }
         }, 3000, 0);
         
@@ -145,189 +144,10 @@ var Racquetball = (function() {
         }
     });
     
-    Crafty.c('Racquet', {
-        _held: false,
-        _hitbox: { x: 160 - 48, y: 480 - (48 + 52), w: 96, h: 32 },
-        _bounds: { x: { l: 0, h: 320 }, y: { l: 0, h: 480 } },
-        init: function() {
-            this.requires('2D, Canvas, Image, Mouse, Edges');
-            this.image('img/racquet.png')
-            .bind('MouseDown', function() { this._held = true; })
-            .bind('MouseUp', function() { this._held = false; })
-            .bind('MouseMove', function(e) {
-                var t = this;
-                if (!t._held) {
-                    return;
-                }
-                
-                t._hitbox.x = e.realX - (t._hitbox.w / 2);
-                
-                if (t._hitbox.x < t._bounds.x.l) {
-                    t._hitbox.x = t._bounds.x.l;
-                } else if (t._hitbox.x > t._bounds.x.h - t._hitbox.w) {
-                    t._hitbox.x = t._bounds.x.h - t._hitbox.w;
-                }
-                
-                t.attr({ x: t._hitbox.x }).trigger('Moved', { x: this._x, y: this._y });
-                
-            })
-            .attr({ x: this._hitbox.x, y: this._hitbox.y, width: this._hitbox.w, height: this._hitbox.h });
-        }
-    });
-    
-    Crafty.c('Ball', {
-        _locked: false,
-        _hitbox: { x: 160 - 48, y: 480 - (48 + 52), w: 96, h: 32 },
-        _bounds: { x: { l: 0, h: 320 }, y: { l: 0, h: 480 } },
-        _vel: { x: 1.0, y: -1.0 },
-        _speed: 14.0,
-        _aorb: true,
-        _prevPos: { x: 0, y: 0 },
-        init: function() {
-            this.requires('2D, Canvas, Image, Collision, Edges');
-            this.image('img/ball.png')
-            .attr({ x: 160, y: 120, width: 16, height: 16 })
-            .bind('EnterFrame', this._onEnterFrame);
-            
-            this._hitbox.x.l += 8;
-            this._hitbox.x.h -= 8;
-            this._hitbox.y.l += 8;
-            this._hitbox.y.h -= 8;
-        },
-        
-        reset: function() {
-            var t = this;
-            t.attr({ x: 160, y: 120 });
-            t._vel.x = 1.0;
-            t._vel.y = -1.0;
-            t._speed = 14.0;
-            t._locked = false;
-        },
-        
-        _onEnterFrame: function() {
-            var t = this, dt = 0.33;
-            if (t._locked) {
-                return;
-            }
-            
-            t._aorb = !t._aorb;
-            
-            t._prevPos.x = t.x;
-            t._prevPos.y = t.y;
-            
-            t.x += t._vel.x * t._speed * dt;
-            t.y += t._vel.y * t._speed * dt;
-            
-            t._checkLostBall();
-            t._checkWallCollisions();
-            t._checkPaddleCollision();
-        },
-        
-        _playBounceSfx: function() {
-            Crafty.audio.play(this._aorb ? 'bounce' : 'bounce2');
-        },
-        
-        _playScoreSfx: function() {
-            Crafty.audio.play('win');
-        },
-        
-        _playLostSfx: function() {
-            Crafty.audio.play('lose');
-        },
-        
-        _speedUp: function() {
-            var t = this;
-            t._speed += 0.8;
-            if (t._speed > 60) {
-                t._speed = 60;
-            }
-        },
-        
-        _checkLostBall: function() {
-            var t = this;
-            if (t.y < t._bounds.y.h) {
-                return;
-            }
-            
-            t._playLostSfx();
-            t.destroy();
-            t._locked = true;
-            
-            setTimeout(function() {
-                Crafty.trigger('BallLost');
-            }, 1000);
-        },
-        
-        _checkWallCollisions: function() {
-            var t = this;
-            
-            if (t.x < t._bounds.x.l || t.x > t._bounds.x.h) {
-                t.x = t._prevPos.x;
-                t._vel.x *= -1;
-                t._playBounceSfx();
-            }
-            
-            if (t.y < t._bounds.y.l) {
-                t._playScoreSfx();
-                t._speedUp();
-                t.y = t._prevPos.y;
-                t._vel.y *= -1;
-            }
-        },
-        
-        _checkPaddleCollision: function() {
-            var t = this;
-            if (t._vel.y < 0) {
-                return;
-            }
-            
-            var hit = t.hit('Racquet')[0];
-            
-            if (hit) {
-                t._playBounceSfx();
-                t._speedUp();
-                t._vel.y *= -1;
-                t._vel.x = t._calculateBounceVelocity(hit.obj);
-            }
-        },
-        
-        _calculateBounceVelocity: function(subject) {
-            var t = this,
-                dist = Crafty.math.distance(subject.centerX, subject.centerY, t.centerX, t.centerY);
-            
-            var magnitude = dist - ((t.h - subject.h) * 0.5);
-            var ratio = magnitude / (subject.w / 2) * 2.5;
-            if (t.centerX < subject.centerX) {
-                ratio = -ratio;
-            }
-            return ratio;
-        }
-    });
-    
     Crafty.scene('Court', function() {
-        /*
-        var fieldBounds = { x: { l: 0, h: 320 }, y: { l: 0, h: 432 } },
-            score = 0,
-            racquet = null,
-            ball = null,
-            scoreDisplay = null,
-            muteButton = null,
-            pauseButton = null;
         
-        scoreDisplay = Crafty.e('ScoreDisplay');
-        ball = Crafty.e('Ball');
-        racquet = Crafty.e('Racquet');
-        muteButton = Crafty.e('MuteButton');
-        pauseButton = Crafty.e('PauseButton');
-        
-        Crafty.bind('BallLost', function() {
-            Crafty.audio.stop();
-            Crafty.trigger('MessageEvent', 'You Lose!');
-            Crafty.scene('Message');
-        });
-        */
-        
-        // REFACTORING
+        // avoid global messaging
+        var gameManager = Crafty.e('gm');
         
         // entities
         // -ball
@@ -360,30 +180,6 @@ var Racquetball = (function() {
         // -display
         //  provides display(), modal() functions
         
-        Crafty.c('blackbox', {
-            init: function() {
-                this.requires('2D, DOM, Color, Tween')
-                .attr({ x: 0, y: 0, w: 320, h: 480, alpha: 1.0 })
-                .color('#000000');
-            },
-            cover: function() {
-                this.attr({ alpha: 1.0 });
-                return this;
-            },
-            uncover: function() {
-                this.attr({ alpha: 0.0 });
-                return this;
-            },
-            fadeOut: function(duration) {
-                this.tween({alpha: 0.0 }, duration);
-                return this;
-            },
-            fadeIn: function(duration) {
-                this.tween({alpha: 1.0 }, duration);
-                return this;
-            }
-        });
-        
         Crafty.c('actor', {
             _startX: 0,
             _startY: 0,
@@ -413,16 +209,39 @@ var Racquetball = (function() {
             }
         });
         
+        Crafty.c('blackbox', {
+            init: function() {
+                this.requires('2D, DOM, Color, Tween')
+                .attr({ x: 0, y: 0, w: 320, h: 480, alpha: 1.0 })
+                .color('#000000');
+            },
+            cover: function() {
+                this.attr({ alpha: 1.0, z: 10000 });
+                return this;
+            },
+            uncover: function() {
+                this.attr({ alpha: 0.0, z: 10000 });
+                return this;
+            },
+            fadeOut: function(duration) {
+                this.tween({alpha: 0.0 }, duration);
+                return this;
+            },
+            fadeIn: function(duration) {
+                this.tween({alpha: 1.0 }, duration);
+                return this;
+            }
+        });
+        
         Crafty.c('display', {
             init: function() {
-                this.requires('2D, DOM, Text');
+                this.requires('2D, DOM, Text')
+                .textColor('#ffffff')
+                .textFont({size: '36px', family: 'Helvetica' })
+                .css('text-align', 'center');
             },
             display: function(what) {
-                this.textColor('#ffffff')
-                .textFont({size: '36px', family: 'Helvetica' })
-		.text(what)
-		.css('text-align', 'center');
-                return this;
+                return this.text(what);
             },
             modal: function() {
                 var t = this;
@@ -442,93 +261,242 @@ var Racquetball = (function() {
         });
         
         Crafty.c('racquet', {
+           _held: false,
+            _hitbox: { x: 160 - 48, y: 480 - (48 + 52), w: 96, h: 32 },
+            _bounds: { x: { l: 0, h: 320 }, y: { l: 0, h: 432 } },
             init: function() {
-                this.requires('Image');
-            },
-        });
-        
-        var blackbox = Crafty.e('blackbox').uncover();
-        
-        var racquet = Crafty.e('actor, racquet').place();
-        var ball = Crafty.e('actor, ball').place();
-        
-        var scoreDisplay = Crafty.e('display');
-        
-        Crafty.bind('court_loading', function() {
-            blackbox.cover().fadeOut(1500).bind('TweenEnd', function() {
-                racquet.reset().show();
-                ball.reset().show();
-                score = 0;
-                scoreDisplay.display(score);
-                Crafty.trigger('court_ready');
-            });
-        });
-        
-        Crafty.bind('court_ready', function() {
-            setTimeout(function() {
-                racquet.activate();
-                ball.activate();
-            }, 1000);
-        });
-        
-        Crafty.bind('court_closing', function() {
-            blackbox.uncover().fadeIn(1500).bind('TweenEnd', function() {
-                Crafty.scene('Title');
-            });
-        });
-        
-        Crafty.bind('ball_scored', function() {
-            score++;
-            scoreDisplay.display(score);
-            if (score >= 15) {
-                message.display('You Win!').modal().bind('dismiss', function() {
-                    Crafty.trigger('court_closing');
+                this.requires('Image, Mouse, Edges')
+                .image('img/racquet.png')
+                .attr({ x: this._hitbox.x, y: this._hitbox.y, width: this._hitbox.w, height: this._hitbox.h });
+                
+                var t = this;
+                
+                Crafty.e('2D, DOM, Mouse').attr({x: 0, y: 0, w: 320, h: 480, alpha: 0.0 })
+                .bind('MouseDown', function() { t._held = true; })
+                .bind('MouseUp', function() { t._held = false; })
+                .bind('MouseMove', function(e) {
+                    if (!t._held || !t._activated) {
+                        return;
+                    }
+                    
+                    t._hitbox.x = e.realX - (t._hitbox.w / 2);
+                    
+                    if (t._hitbox.x < t._bounds.x.l) {
+                        t._hitbox.x = t._bounds.x.l;
+                    } else if (t._hitbox.x > t._bounds.x.h - t._hitbox.w) {
+                        t._hitbox.x = t._bounds.x.h - t._hitbox.w;
+                    }
+                    
+                    t.attr({ x: t._hitbox.x }).trigger('Moved', { x: t._x, y: t._y });
                 });
+                
             }
         });
         
-        Crafty.bind('ball_lost', function() {
-            message.display('You Lose!').modal().bind('dismiss', function() {
-                Crafty.trigger('court_closing');
+        Crafty.c('ball', {
+            _locked: false,
+            _hitbox: { x: 160, y: 120, w: 16, h: 16 },
+            _bounds: { x: { l: 0, h: 320 }, y: { l: 0, h: 432 } },
+            _vel: { x: 1.0, y: -1.0 },
+            _speed: 10.0,
+            _aorb: true,
+            _prevPos: { x: 0, y: 0 },
+            init: function() {
+                this.requires('Image, Collision, Edges');
+                this.image('img/ball.png')
+                .attr({ x: 160, y: 120, width: 16, height: 16 })
+                .bind('EnterFrame', this._onEnterFrame);
+                
+                this._hitbox.x.l += 8;
+                this._hitbox.x.h -= 8;
+                this._hitbox.y.l += 8;
+                this._hitbox.y.h -= 8;
+            },
+            
+            reset: function() {
+                var t = this;
+                t.attr({ x: 160, y: 120 });
+                t._vel.x = 1.0;
+                t._vel.y = -1.0;
+                t._speed = 10.0;
+                t._locked = false;
+                return this;
+            },
+            
+            _onEnterFrame: function() {
+                var t = this, dt = 0.33;
+                if (t._locked || !t._activated) {
+                    return;
+                }
+                
+                t._aorb = !t._aorb;
+                
+                t._prevPos.x = t.x;
+                t._prevPos.y = t.y;
+                
+                t.x += t._vel.x * t._speed * dt;
+                t.y += t._vel.y * t._speed * dt;
+                
+                t._checkLostBall();
+                t._checkWallCollisions();
+                t._checkPaddleCollision();
+            },
+            
+            _playBounceSfx: function() {
+                Crafty.audio.play(this._aorb ? 'bounce' : 'bounce2');
+            },
+            
+            _playScoreSfx: function() {
+                Crafty.audio.play('win');
+            },
+            
+            _playLostSfx: function() {
+                Crafty.audio.play('lose');
+            },
+            
+            _speedUp: function() {
+                var t = this;
+                t._speed += 0.8;
+                if (t._speed > 60) {
+                    t._speed = 60;
+                }
+            },
+            
+            _checkLostBall: function() {
+                var t = this;
+                if (t.y < t._bounds.y.h) {
+                    return;
+                }
+                
+                t._playLostSfx();
+                t.destroy();
+                t._locked = true;
+                
+                setTimeout(function() {
+                    gameManager.trigger('ball_lost');
+                }, 1000);
+            },
+            
+            _checkWallCollisions: function() {
+                var t = this;
+                
+                if (t.x < t._bounds.x.l || t.x > t._bounds.x.h) {
+                    t.x = t._prevPos.x;
+                    t._vel.x *= -1;
+                    t._playBounceSfx();
+                }
+                
+                if (t.y < t._bounds.y.l) {
+                    gameManager.trigger('ball_scored');
+                    t._playScoreSfx();
+                    t._speedUp();
+                    t.y = t._prevPos.y;
+                    t._vel.y *= -1;
+                }
+            },
+            
+            _checkPaddleCollision: function() {
+                var t = this;
+                if (t._vel.y < 0) {
+                    return;
+                }
+                
+                var hit = t.hit('racquet')[0];
+                
+                if (hit) {
+                    t._playBounceSfx();
+                    t._speedUp();
+                    t._vel.y *= -1;
+                    t._vel.x = t._calculateBounceVelocity(hit.obj);
+                }
+            },
+            
+            _calculateBounceVelocity: function(subject) {
+                var t = this,
+                    dist = Crafty.math.distance(subject.centerX, subject.centerY, t.centerX, t.centerY);
+                
+                var magnitude = dist - ((t.h - subject.h) * 0.5);
+                var ratio = magnitude / (subject.w / 2) * 1.5;
+                if (t.centerX < subject.centerX) {
+                    ratio = -ratio;
+                }
+                return ratio;
+            }
+        });
+        
+        
+        
+        var blackbox = Crafty.e('blackbox').uncover();
+        
+        var racquet = Crafty.e('actor, racquet').place(160 - 48, 480 - (48 + 52));
+        var ball = Crafty.e('actor, ball').place();
+        
+        var scoreDisplay = Crafty.e('display').attr({ w: 320, h: 48, y: 480 - 48 }).display('score: 0');
+        
+        var message = Crafty.e('display').attr({ y:220, h: 96, w: 320 });
+        
+        function _court_loading() {
+            blackbox.cover().fadeOut(1500).one('TweenEnd', function() {
+                racquet.reset().show();
+                ball.reset().show();
+                score = 0;
+                scoreDisplay.display('score: '+score);
+                gameManager.trigger('court_ready');
             });
-        });
+        }
         
-        // the court scene actually starts here
-        Crafty.trigger('court_loading');
+        function _court_ready() {
+            
+            var counter = 3;
+            function CountDown() {
+                if (counter < 0) {
+                    message.display('');
+                    racquet.activate();
+                    ball.activate();
+                } else {
+                    message.display(counter===0?'Go!':counter);
+                    Crafty.audio.play('win');
+                }
+                counter--;
+            }
+            var countDelay = 1500 / 3;
+            Crafty.e('Delay').delay(CountDown, countDelay, 4);
+            
+        }
         
-    }, function() {
-        // remove global event bindings when the court scene exits
-        Crafty.unbind('court_loading');
-        Crafty.unbind('court_ready');
-        Crafty.unbind('court_closing');
-        Crafty.unbind('ball_scored');
-        Crafty.unbind('ball_lost');
+        function _court_closing() {
+            blackbox.uncover().fadeIn(1500).one('TweenEnd', function() {
+                Crafty.audio.stop();
+                Crafty.scene('Title');
+            });
+        }
         
-        // stop audio playback
-        Crafty.audio.stop();
-    });
-    
-    
-    
-    
-    
-    
-    
-    Crafty.scene('Message', function() {
-        Crafty.bind('MessageEvent', function(msg) {
-            Crafty.e('2D, Canvas, Text')
-            .attr({x: 10, y: 24})
-            .textColor('#ffffff')
-            .textFont({size: '56px', family: 'Helvetica' })
-            .text(msg);
-        });
+        function _ball_scored() {
+            score++;
+            scoreDisplay.display('score: '+score);
+            if (score >= 15) {
+                ball.destroy();
+                message.display('You Win!').modal().bind('dismiss', function() {
+                    gameManager.trigger('court_closing');
+                });
+            }
+        }
         
-        Crafty.e('2D, DOM, Color, Mouse')
-        .color('black')
-        .attr({x: 0, y: 0, w: 320, h: 480, alpha: 0.0 })
-        .bind('Click', function() {
-            Crafty.scene('Title');
-        });
+        function _ball_lost() {
+            message.display('You Lose!').modal().bind('dismiss', function() {
+                gameManager.trigger('court_closing');
+            });
+        }
+        
+        // bind the events
+        gameManager.bind('court_loading', _court_loading);
+        gameManager.bind('court_ready', _court_ready);
+        gameManager.bind('court_closing', _court_closing);
+        gameManager.bind('ball_scored', _ball_scored);
+        gameManager.bind('ball_lost', _ball_lost);
+        
+        // start things off
+        gameManager.trigger('court_loading');
     });
     
     Crafty.scene('Loading');
