@@ -1,0 +1,13 @@
+{
+  "name": "Racquetball",
+  "description": "A simple racquetball-like game built with Crafty.js to test the platform and try out Clay.IO services.",
+  "version": "0.1.0",
+  "app": {
+    "launch": {
+      "local_path": "index.html"
+    }
+  },
+  "icons": {
+    "128": "icon_128.png"
+  }
+}
