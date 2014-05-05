@@ -1,4 +1,8 @@
 {
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BangBangAttackStudios/racquetball-crafty.git"
+  },
   "name": "racquetball",
   "version": "0.1.0",
   "description": "A simple racquetball-like game built with Crafty.js to test the platform and try out Clay.IO services.",
