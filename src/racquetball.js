@@ -6,6 +6,10 @@
 var Racquetball = (function() {
     var ns = {};
     
+    setTimeout(function() {
+        ClayWrap.showAds();
+    }, 1500);
+    
     Crafty.init(320, 480, document.getElementById('game'));
     Crafty.canvas.init();
     Crafty.background('#303030');
@@ -98,6 +102,8 @@ var Racquetball = (function() {
         .textFont({size: '34px', family: 'Helvetica' })
         .text('START')
         .bind('Click', function() {
+            ClayWrap.award('ach_1st_play');
+            ClayWrap.logStat('play_game', 1);
             Crafty.scene('Court');
             Crafty.audio.play('bgm', -1);
         });
@@ -108,6 +114,7 @@ var Racquetball = (function() {
         .textFont({size: '34px', family: 'Helvetica' })
         .text('CREDITS')
         .bind('Click', function() {
+            ClayWrap.logStat('view_credits', 1);
             Crafty.scene('Credits');
         });
         
@@ -125,6 +132,7 @@ var Racquetball = (function() {
         .attr({x: 0, y: 0, w: 320, h: 480, alpha: 0.0 })
         .bind('Click', function() {
             Crafty.scene('Title');
+            ClayWrap.logStat('exit_credits', 1);
         });
         
     });
@@ -467,6 +475,7 @@ var Racquetball = (function() {
         function _court_closing() {
             blackbox.uncover().fadeIn(1500).one('TweenEnd', function() {
                 Crafty.audio.stop();
+                ClayWrap.showRatings();
                 Crafty.scene('Title');
             });
         }
@@ -476,6 +485,8 @@ var Racquetball = (function() {
             scoreDisplay.display('score: '+score);
             if (score >= 15) {
                 ball.destroy();
+                ClayWrap.logStat('won_game', 1);
+                ClayWrap.fbPost('Hey, I just won in Racquetball by Bang Bang Attack Studios!');
                 message.display('You Win!').modal().bind('dismiss', function() {
                     gameManager.trigger('court_closing');
                 });
@@ -483,6 +494,7 @@ var Racquetball = (function() {
         }
         
         function _ball_lost() {
+            ClayWrap.logStat('lost_game', 1);
             message.display('You Lose!').modal().bind('dismiss', function() {
                 gameManager.trigger('court_closing');
             });

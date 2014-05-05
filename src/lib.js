@@ -28,8 +28,8 @@ var ClayWrap = (function() {
         showRatings: function() {
             new Clay.Ratings();
         },
-        logStat: function(stat) {
-            Clay.Stats.logStat(stat);
+        logStat: function(name, quantity) {
+            Clay.Stats.logStat({ name: name, quantity: quantity || 1 });
         },
         fbPost: function(msg) {
             var screenshot = new Clay.Screenshot({ prompt: false });
