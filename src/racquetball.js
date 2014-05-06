@@ -221,7 +221,7 @@ var Racquetball = (function() {
             init: function() {
                 this.requires('2D, DOM, Color, Tween')
                 .attr({ x: 0, y: 0, w: 320, h: 480, alpha: 1.0 })
-                .color('#000000');
+                .color('#303030');
             },
             cover: function() {
                 this.attr({ alpha: 1.0, z: 10000 });
